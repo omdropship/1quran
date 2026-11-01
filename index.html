@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Al-Qur'an Digital</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framework7@8.3.3/framework7-bundle.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+    
+    .arab-text {
+      font-family: 'Amiri', serif;
+      font-size: 28px;
+      text-align: right;
+      direction: rtl;
+      line-height: 1.9;
+      margin-bottom: 12px;
+      color: var(--f7-text-color);
+    }
+    .terjemah-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--f7-text-color);
+      opacity: 0.85;
+    }
+    .ayat-card {
+      margin: 8px 16px;
+      transition: box-shadow 0.3s ease, background-color 0.3s ease;
+    }
+    .ayat-card.playing {
+      box-shadow: 0 0 0 2px var(--f7-theme-color);
+      background-color: rgba(0, 122, 255, 0.05);
+    }
+    .ayat-card .card-content-inner { padding: 16px; }
+    .nomor-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--f7-theme-color);
+      color: white;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: 13px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .surah-info {
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid var(--f7-list-item-border-color);
+    }
+    .surah-info h2 {
+      margin: 0 0 8px 0;
+      color: var(--f7-theme-color);
+    }
+    .loading-state, .error-state {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .error-state { color: #dc3545; }
+    
+    /* Tombol Play per Ayat */
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--f7-theme-color);
+      color: white;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: opacity 0.2s;
+    }
+    .play-btn:active { opacity: 0.7; }
+    .play-btn.playing {
+      background: #dc3545;
+    }
+    
+    /* Player Bar di Bawah */
+    .audio-player-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--f7-bars-bg-color);
+      border-top: 1px solid var(--f7-list-item-border-color);
+      padding: 10px 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    .audio-player-bar.active { display: flex; }
+    .audio-player-bar .info {
+      flex: 1;
+      min-width: 0;
+    }
+    .audio-player-bar .info .title {
+      font-weight: bold;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .audio-player-bar .info .subtitle {
+      font-size: 12px;
+      opacity: 0.6;
+    }
+    .audio-player-bar button {
+      background: var(--f7-theme-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .page-content { padding-bottom: 80px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="view view-main">
+      <div class="page">
+        <div class="navbar">
+          <div class="navbar-inner">
+            <div class="title">Al-Qur'an Digital</div>
+            <div class="right">
+              <a href="#" class="link" id="theme-toggle" style="padding-right:16px;">🌙</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-content">
+          <!-- Pilihan Surah & Qari -->
+          <div class="list list-strong" style="margin-top: 16px;">
+            <ul>
+              <li>
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title label">Pilih Surah</div>
+                    <div class="item-input">
+                      <select id="surah-select">
+                        <option value="">Memuat daftar surah...</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <div class="item-content">
+                  <div class="item-inner">
+                    <div class="item-title label">Qari</div>
+                    <div class="item-input">
+                      <select id="qari-select">
+                        <option value="05">Mishary Al-Afasy</option>
+                        <option value="01">Abdullah Al-Juhany</option>
+                        <option value="02">Abdul Muhsin Al-Qasim</option>
+                        <option value="03">Abdurrahman As-Sudais</option>
+                        <option value="04">Ibrahim Al-Dossari</option>
+                        <option value="06">Yasser Al-Dosari</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div id="surah-info" class="surah-info" style="display:none;"></div>
+          <div id="ayat-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Bar Fixed di Bawah -->
+  <div class="audio-player-bar" id="audio-bar">
+    <div class="info">
+      <div class="title" id="audio-title">-</div>
+      <div class="subtitle" id="audio-subtitle">-</div>
+    </div>
+    <button id="audio-prev" title="Sebelumnya">⏮</button>
+    <button id="audio-play" title="Play/Pause">▶</button>
+    <button id="audio-next" title="Berikutnya">⏭</button>
+  </div>
+
+  <audio id="audio-element" preload="none"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/framework7@8.3.3/framework7-bundle.min.js"></script>
+
+  <script>
+    // ==========================================
+    // 1. INISIALISASI
+    // ==========================================
+    var app = new Framework7({
+      root: '#app',
+      name: 'AlQuranApp',
+      theme: 'auto',
+      darkMode: 'auto',
+    });
+    var $$ = Dom7;
+
+    const API_BASE = 'https://equran.id/api/v2';
+
+    // State global
+    let currentAyatList = [];
+    let currentSurahNomor = null;
+    let currentSurahData = null;
+    let currentPlayingIndex = -1;
+    let currentQari = '05';
+
+    // DOM refs
+    const surahSelect = document.getElementById('surah-select');
+    const qariSelect = document.getElementById('qari-select');
+    const ayatContainer = document.getElementById('ayat-container');
+    const surahInfo = document.getElementById('surah-info');
+    const audioEl = document.getElementById('audio-element');
+    const audioBar = document.getElementById('audio-bar');
+    const audioTitle = document.getElementById('audio-title');
+    const audioSubtitle = document.getElementById('audio-subtitle');
+    const btnPlay = document.getElementById('audio-play');
+    const btnPrev = document.getElementById('audio-prev');
+    const btnNext = document.getElementById('audio-next');
+
+    // ==========================================
+    // 2. LOAD DAFTAR SURAH
+    // ==========================================
+    async function loadSurahList() {
+      try {
+        const res = await fetch(`${API_BASE}/surat`);
+        const result = await res.json();
+        surahSelect.innerHTML = '<option value="">-- Pilih Surah --</option>';
+        result.data.forEach(surah => {
+          const opt = document.createElement('option');
+          opt.value = surah.nomor;
+          opt.textContent = `${surah.nomor}. ${surah.namaLatin} (${surah.arti}) - ${surah.jumlahAyat} ayat`;
+          surahSelect.appendChild(opt);
+        });
+      } catch (err) {
+        surahSelect.innerHTML = '<option value="">Gagal memuat surah</option>';
+        console.error(err);
+      }
+    }
+
+    // ==========================================
+    // 3. LOAD AYAT PER SURAH
+    // ==========================================
+    async function loadAyat(surahNomor) {
+      stopAudio();
+      ayatContainer.innerHTML = `<div class="loading-state"><div class="preloader"></div><p style="margin-top:16px;">Memuat ayat...</p></div>`;
+      surahInfo.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/surat/${surahNomor}`);
+        const result = await res.json();
+        currentSurahData = result.data;
+        currentAyatList = result.data.ayat;
+        currentSurahNomor = surahNomor;
+
+        surahInfo.style.display = 'block';
+        surahInfo.innerHTML = `
+          <h2>${currentSurahData.namaLatin}</h2>
+          <p style="margin:0; opacity:0.7;">${currentSurahData.nama} • ${currentSurahData.arti} • ${currentSurahData.jumlahAyat} ayat</p>
+          <p style="margin:8px 0 0; font-size:13px; opacity:0.6;">${currentSurahData.tempatTurun === 'Mekah' ? 'Makkiyah' : 'Madaniyah'}</p>
+        `;
+
+        ayatContainer.innerHTML = '';
+        currentAyatList.forEach((ayat, index) => {
+          const card = document.createElement('div');
+          card.className = 'card ayat-card';
+          card.dataset.index = index;
+          card.innerHTML = `
+            <div class="card-content card-content-padding">
+              <div class="arab-text">${ayat.teksArab}</div>
+              <div class="terjemah-text">
+                <span class="nomor-badge">${ayat.nomorAyat}</span>
+                ${ayat.teksIndonesia}
+              </div>
+              <button class="play-btn" data-index="${index}">▶ Putar</button>
+            </div>
+          `;
+          ayatContainer.appendChild(card);
+        });
+
+        // Event listener tombol play per ayat
+        document.querySelectorAll('.play-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            playAyat(idx);
+          });
+        });
+
+        $$('.page-content').scrollTop(0, 300);
+      } catch (err) {
+        ayatContainer.innerHTML = `<div class="error-state"><p>Gagal memuat ayat.</p></div>`;
+        console.error(err);
+      }
+    }
+
+    // ==========================================
+    // 4. FUNGSI AUDIO
+    // ==========================================
+    function playAyat(index) {
+      if (index < 0 || index >= currentAyatList.length) return;
+      
+      const ayat = currentAyatList[index];
+      const audioUrl = ayat.audio[currentQari];
+      
+      if (!audioUrl) {
+        alert('Audio tidak tersedia untuk qari ini.');
+        return;
+      }
+
+      currentPlayingIndex = index;
+      audioEl.src = audioUrl;
+      audioEl.play().catch(e => console.error('Play error:', e));
+
+      // Update UI
+      updatePlayingUI();
+      updateAudioBar();
+    }
+
+    function updatePlayingUI() {
+      // Hapus highlight semua
+      document.querySelectorAll('.ayat-card').forEach(c => c.classList.remove('playing'));
+      document.querySelectorAll('.play-btn').forEach(b => {
+        b.classList.remove('playing');
+        b.textContent = '▶ Putar';
+      });
+
+      if (currentPlayingIndex >= 0) {
+        const card = document.querySelector(`.ayat-card[data-index="${currentPlayingIndex}"]`);
+        const btn = document.querySelector(`.play-btn[data-index="${currentPlayingIndex}"]`);
+        if (card) {
+          card.classList.add('playing');
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (btn) {
+          btn.classList.add('playing');
+          btn.textContent = '⏸ Jeda';
+        }
+      }
+    }
+
+    function updateAudioBar() {
+      if (currentPlayingIndex < 0) return;
+      audioBar.classList.add('active');
+      const ayat = currentAyatList[currentPlayingIndex];
+      const qariName = qariSelect.options[qariSelect.selectedIndex].text;
+      audioTitle.textContent = `${currentSurahData.namaLatin} : ${ayat.nomorAyat}`;
+      audioSubtitle.textContent = qariName;
+    }
+
+    function stopAudio() {
+      audioEl.pause();
+      audioEl.src = '';
+      currentPlayingIndex = -1;
+      audioBar.classList.remove('active');
+      updatePlayingUI();
+    }
+
+    // ==========================================
+    // 5. EVENT AUDIO ELEMENT
+    // ==========================================
+    audioEl.addEventListener('play', () => {
+      btnPlay.textContent = '⏸';
+      updatePlayingUI();
+    });
+    audioEl.addEventListener('pause', () => {
+      btnPlay.textContent = '▶';
+    });
+    audioEl.addEventListener('ended', () => {
+      // Auto-lanjut ke ayat berikutnya
+      if (currentPlayingIndex < currentAyatList.length - 1) {
+        playAyat(currentPlayingIndex + 1);
+      } else {
+        stopAudio();
+      }
+    });
+
+    // ==========================================
+    // 6. KONTROL PLAYER BAR
+    // ==========================================
+    btnPlay.addEventListener('click', () => {
+      if (audioEl.paused) {
+        audioEl.play();
+      } else {
+        audioEl.pause();
+      }
+    });
+    btnPrev.addEventListener('click', () => {
+      if (currentPlayingIndex > 0) playAyat(currentPlayingIndex - 1);
+    });
+    btnNext.addEventListener('click', () => {
+      if (currentPlayingIndex < currentAyatList.length - 1) playAyat(currentPlayingIndex + 1);
+    });
+
+    // ==========================================
+    // 7. EVENT PILIH SURAH & QARI
+    // ==========================================
+    surahSelect.addEventListener('change', function() {
+      if (!this.value) {
+        stopAudio();
+        ayatContainer.innerHTML = '';
+        surahInfo.style.display = 'none';
+        return;
+      }
+      loadAyat(this.value);
+    });
+
+    qariSelect.addEventListener('change', function() {
+      currentQari = this.value;
+      // Jika sedang memutar, ganti ke qari baru dari ayat yang sama
+      if (currentPlayingIndex >= 0) {
+        playAyat(currentPlayingIndex);
+      }
+    });
+
+    // ==========================================
+    // 8. TOGGLE TEMA
+    // ==========================================
+    let isDark = false;
+    document.getElementById('theme-toggle').addEventListener('click', function(e) {
+      e.preventDefault();
+      isDark = !isDark;
+      if (isDark) {
+        $$('html').addClass('dark');
+        this.textContent = '☀️';
+      } else {
+        $$('html').removeClass('dark');
+        this.textContent = '🌙';
+      }
+    });
+
+    // ==========================================
+    // 9. INIT
+    // ==========================================
+    app.on('init', () => {
+      loadSurahList();
+    });
+  </script>
+</body>
+</html>
